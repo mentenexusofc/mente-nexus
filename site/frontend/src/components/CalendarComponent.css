@@ -56,6 +56,11 @@
   box-shadow: none !important;
 }
 
+/* Hide Today button specifically */
+.rbc-btn-group:first-child button:first-child {
+  display: none !important;
+}
+
 .rbc-event {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
   transition: transform 0.2s;
@@ -72,4 +77,45 @@
 .rbc-time-content::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
+}
+
+.client-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.client-search .search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-secondary);
+}
+
+.client-search input {
+  padding-left: 36px;
+  width: 100%;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-group.half {
+  flex: 1;
+}
+
+.delete-btn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: #facc15;
+  margin: 0;
 }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, LogIn, ShieldCheck } from 'lucide-react';
 
 interface LoginProps {
-  onLogin: (success: boolean) => void;
+  onLogin: (success: boolean, email: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -13,7 +13,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (email === 'mentenexus.ia@gmail.com' && password === 'l57aJ965.') {
-      onLogin(true);
+      onLogin(true, email);
     } else {
       setError('Credenciais inválidas. Tente novamente.');
     }
