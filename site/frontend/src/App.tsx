@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -16,8 +16,8 @@ import './App.css';
 import CalendarComponent from './components/CalendarComponent';
 import Login from './components/Login';
 
-const CLINICA_ID = '5511999999999'; // Exemplo de ID da clínica
-const API_URL = 'http://72.60.11.33:3001/api';
+const CLINICA_ID = '5511999999999'; // Exemplo de ID da clÃ­nica
+const API_URL = 'http://jsceqezyy86wb3mz6pojr7kr.72.60.11.33.sslip.io/api';
 
 interface Cliente {
   id: number;
@@ -70,19 +70,19 @@ const App: React.FC = () => {
           <div className="dashboard-grid">
             <div className="glass-card">
               <h3>Agendamentos de Hoje</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Resumo da sua clínica hoje.</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Resumo da sua clÃ­nica hoje.</p>
               <div style={{ marginTop: '1rem', display: 'flex', gap: '10px' }}>
                 <span className="status-badge status-check">8 Realizados</span>
                 <span className="status-badge status-pending">4 Pendentes</span>
               </div>
             </div>
             <div className="glass-card">
-              <h3>Novos Clientes (Mês)</h3>
+              <h3>Novos Clientes (MÃªs)</h3>
               <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>+48</div>
-              <p style={{ color: '#4ade80', fontSize: '0.8rem' }}>↑ 12% em relação ao mês anterior</p>
+              <p style={{ color: '#4ade80', fontSize: '0.8rem' }}>â†‘ 12% em relaÃ§Ã£o ao mÃªs anterior</p>
             </div>
             <div className="glass-card">
-              <h3>Status da Automação</h3>
+              <h3>Status da AutomaÃ§Ã£o</h3>
               <div style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <div style={{ width: 10, height: 10, background: '#4ade80', borderRadius: '50%' }}></div>
                 Online - WhatsApp Conectado
@@ -96,7 +96,7 @@ const App: React.FC = () => {
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <div>
                 <h2>Agenda de Atendimentos</h2>
-                <p style={{ color: 'var(--text-secondary)' }}>Gerencie seus horários de forma visual.</p>
+                <p style={{ color: 'var(--text-secondary)' }}>Gerencie seus horÃ¡rios de forma visual.</p>
               </div>
               <button className="nav-item" style={{ padding: '0.8rem 1.2rem', background: 'var(--accent-color)', color: 'black', fontWeight: 'bold' }}>
                 <Plus size={20}/> Novo Agendamento
@@ -109,7 +109,7 @@ const App: React.FC = () => {
         return (
           <div className="glass-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2>Gestão de Clientes</h2>
+              <h2>GestÃ£o de Clientes</h2>
               <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '5px 15px', alignItems: 'center', gap: '10px' }}>
                 <Search size={16} color="var(--text-secondary)"/>
                 <input type="text" placeholder="Buscar cliente..." style={{ background: 'none', border: 'none', color: 'white', outline: 'none' }} />
@@ -173,7 +173,7 @@ const App: React.FC = () => {
             <Users size={20} /> Clientes
           </div>
           <div className={`nav-item ${activeTab === 'Configuracoes' ? 'active' : ''}`} onClick={() => setActiveTab('Configuracoes')}>
-            <Settings size={20} /> Configurações
+            <Settings size={20} /> ConfiguraÃ§Ãµes
           </div>
           <div className="nav-item logout-item" onClick={() => setIsLoggedIn(false)} style={{ marginTop: '2rem', color: '#ef4444' }}>
             <LogOut size={20} /> Sair
@@ -181,7 +181,7 @@ const App: React.FC = () => {
         </div>
         
         <div style={{ marginTop: 'auto', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Filtro Clínica:</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Filtro ClÃ­nica:</div>
           <div style={{ fontWeight: '600' }}>{CLINICA_ID}</div>
         </div>
       </nav>
@@ -190,7 +190,7 @@ const App: React.FC = () => {
         <header className="header" style={{ display: 'flex', justifyContent: 'space-between' }}>
           <div>
             <h1>{activeTab}</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Mente Nexus - Sistema de Automação Inteligente</p>
+            <p style={{ color: 'var(--text-secondary)' }}>Mente Nexus - Sistema de AutomaÃ§Ã£o Inteligente</p>
           </div>
           <div style={{ display: 'flex', gap: '15px' }}>
              <div style={{ position: 'relative', cursor: 'pointer' }}>
@@ -208,3 +208,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

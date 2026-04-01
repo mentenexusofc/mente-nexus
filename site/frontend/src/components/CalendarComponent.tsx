@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar';
 import moment from 'moment';
 // @ts-ignore
@@ -10,7 +10,7 @@ moment.locale('pt-br');
 const localizer = momentLocalizer(moment);
 
 const CLINICA_ID = '5511999999999';
-const API_URL = 'http://72.60.11.33:3001/api';
+const API_URL = 'http://jsceqezyy86wb3mz6pojr7kr.72.60.11.33.sslip.io/api';
 
 interface Agendamento {
   id: number;
@@ -49,7 +49,7 @@ const CalendarComponent: React.FC = () => {
       
       setEvents(mapped);
     } catch (error) {
-      console.error('Erro ao buscar agendamentos para o calendário:', error);
+      console.error('Erro ao buscar agendamentos para o calendÃ¡rio:', error);
     }
   };
 
@@ -67,10 +67,10 @@ const CalendarComponent: React.FC = () => {
         defaultView={Views.MONTH}
         views={['month', 'week', 'day']}
         messages={{
-          next: "Próximo",
+          next: "PrÃ³ximo",
           previous: "Anterior",
           today: "Hoje",
-          month: "Mês",
+          month: "MÃªs",
           week: "Semana",
           day: "Dia"
         }}
@@ -91,3 +91,4 @@ const CalendarComponent: React.FC = () => {
 };
 
 export default CalendarComponent;
+
