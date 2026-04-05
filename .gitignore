@@ -18,3 +18,7 @@ npm-debug.log*
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Pastas privadas
+regras/
+n8n/
