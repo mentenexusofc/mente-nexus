@@ -12,8 +12,7 @@ import {
   Loader2,
   LogOut,
   X,
-  UserPlus,
-  Check
+  UserPlus
 } from 'lucide-react';
 import './App.css';
 import CalendarComponent from './components/CalendarComponent';
@@ -347,8 +346,34 @@ const App: React.FC = () => {
             <p style={{ color: 'var(--text-secondary)' }}>Plataforma Inteligente de GestÃ£o ClÃ­nica</p>
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
-             <div className="header-icon">
+             <div className="header-icon" style={{ position: 'relative' }} onClick={() => setShowNotificacoes(!showNotificacoes)} ref={notifRef}>
                 <Bell size={22} color="var(--text-secondary)"/>
+                {naoLidas > 0 && (
+                  <div style={{ position: 'absolute', top: -5, right: -5, width: 20, height: 20, background: '#ef4444', borderRadius: '50%', color: 'white', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', border: '2px solid var(--bg-color)' }}>
+                    {naoLidas}
+                  </div>
+                )}
+                
+                {showNotificacoes && (
+                  <div className="glass-card animate-fade-in" style={{ position: 'absolute', top: '55px', right: 0, width: '320px', zIndex: 1001, padding: '1rem', maxHeight: '400px', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h4 style={{ margin: 0, color: 'white' }}>Notificações</h4>
+                      <button onClick={marcarTodasLidas} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.75rem', cursor: 'pointer' }}>Marcar todas como lidas</button>
+                    </div>
+                    {notificacoes.length === 0 ? (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem' }}>Nenhuma notificação</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {notificacoes.map(n => (
+                          <div key={n.id} onClick={() => marcarNotificacaoLida(n.id)} style={{ padding: '0.75rem', borderRadius: '10px', background: n.lida ? 'rgba(255,255,255,0.02)' : 'rgba(59, 130, 246, 0.1)', cursor: 'pointer', border: n.lida ? '1px solid transparent' : '1px solid rgba(59, 130, 246, 0.2)' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px', color: n.lida ? 'var(--text-secondary)' : 'white' }}>{n.titulo}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{n.mensagem}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
              </div>
              <div className="header-icon">
                 <Clock size={22} color="var(--text-secondary)"/>
