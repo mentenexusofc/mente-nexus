@@ -22,3 +22,8 @@ Thumbs.db
 # Pastas privadas
 regras/
 n8n/
+
+# Temp/Test Files
+site_payload.tar.gz
+test.txt
+docker-compose.yml
