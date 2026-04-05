@@ -19,7 +19,7 @@ import CalendarComponent from './components/CalendarComponent';
 import Login from './components/Login';
 
 const CLINICA_ID = '5537998145228';
-const API_URL = 'https://ia.mententenexus.tech:3001/api';
+const API_URL = 'https://ia.mentenexus.tech:3001/api';
 
 interface Cliente {
   id: number;
@@ -235,7 +235,7 @@ const App: React.FC = () => {
           <div className="dashboard-grid animate-fade-in">
             <div className="glass-card">
               <h3>Agendamentos de Hoje</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Resumo da sua clÃ­nica hoje.</p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Resumo da sua clínica hoje.</p>
               <div style={{ display: 'flex', gap: '15px' }}>
                 <span className="status-badge status-check">{realizados} Realizados</span>
                 <span className="status-badge status-pending">{pendentes} Pendentes</span>
@@ -247,7 +247,7 @@ const App: React.FC = () => {
               <p style={{ color: '#4ade80', fontSize: '0.85rem' }}>Cadastrados na base Mente Nexus</p>
             </div>
             <div className="glass-card">
-              <h3>Status da AutomaÃ§Ã£o</h3>
+              <h3>Status da Automação</h3>
               <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: 12, height: 12, background: '#4ade80', borderRadius: '50%', boxShadow: '0 0 10px #4ade80' }}></div>
                 <span style={{ fontWeight: 600 }}>Online - WhatsApp Conectado</span>
@@ -261,10 +261,10 @@ const App: React.FC = () => {
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <div>
                 <h2>Agenda de Atendimentos</h2>
-                <p style={{ color: 'var(--text-secondary)' }}>Gerencie horÃ¡rios e profissionais.</p>
+                <p style={{ color: 'var(--text-secondary)' }}>Gerencie horários e profissionais.</p>
               </div>
               <button className="nav-item active" style={{ padding: '0.8rem 1.5rem' }} onClick={() => setShowModalNovoHorario(true)}>
-                <Plus size={20}/> Novo HorÃ¡rio
+                <Plus size={20}/> Novo Horário
               </button>
             </div>
             <CalendarComponent clinicaId={CLINICA_ID} />
@@ -274,7 +274,7 @@ const App: React.FC = () => {
         return (
           <div className="glass-card animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2>GestÃ£o de Clientes</h2>
+              <h2>Gestão de Clientes</h2>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '8px 16px', alignItems: 'center', gap: '12px' }}>
                   <Search size={18} color="var(--text-secondary)"/>
@@ -312,13 +312,13 @@ const App: React.FC = () => {
                     <td><MoreHorizontal size={20} cursor="pointer" color="var(--text-secondary)"/></td>
                   </tr>
                 ))}
-                {clientesFiltrados.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem' }}>Nenhum cliente disponÃ­vel.</td></tr>}
+                {clientesFiltrados.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem' }}>Nenhum cliente disponível.</td></tr>}
               </tbody>
             </table>
           </div>
         );
       default:
-        return <div className="glass-card animate-fade-in">MÃ³dulo em desenvolvimento...</div>;
+        return <div className="glass-card animate-fade-in">Módulo em desenvolvimento...</div>;
     }
   };
 
@@ -341,7 +341,7 @@ const App: React.FC = () => {
             <Users size={22} /> Clientes
           </div>
           <div className={`nav-item ${activeTab === 'Configuracoes' ? 'active' : ''}`} onClick={() => setActiveTab('Configuracoes')}>
-            <Settings size={22} /> ConfiguraÃ§Ãµes
+            <Settings size={22} /> Configurações
           </div>
           <div className="nav-item logout-item" onClick={() => setIsLoggedIn(false)} style={{ marginTop: '3rem', color: '#ef4444' }}>
             <LogOut size={22} /> Sair
@@ -349,7 +349,7 @@ const App: React.FC = () => {
         </div>
         
         <div style={{ marginTop: 'auto', padding: '1.25rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '16px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Filtro ClÃ­nica:</div>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Filtro Clínica:</div>
           <div style={{ fontWeight: '800', fontSize: '13px', color: 'var(--accent-color)' }}>{CLINICA_ID}</div>
         </div>
       </nav>
@@ -358,7 +358,7 @@ const App: React.FC = () => {
         <header className="header">
           <div>
             <h1>{activeTab}</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Plataforma Inteligente de GestÃ£o ClÃ­nica</p>
+            <p style={{ color: 'var(--text-secondary)' }}>Plataforma Inteligente de Gestão Clínica</p>
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
              <div className="header-icon" style={{ position: 'relative' }} onClick={() => setShowNotificacoes(!showNotificacoes)} ref={notifRef}>

@@ -9,7 +9,7 @@ import './CalendarComponent.css';
 moment.locale('pt-br');
 const localizer = momentLocalizer(moment);
 
-const API_URL = 'https://ia.mententenexus.tech:3001/api';
+const API_URL = 'https://ia.mentenexus.tech:3001/api';
 
 interface Agendamento {
   id: number;
@@ -51,7 +51,7 @@ const CalendarComponent: React.FC<CalendarProps> = ({ clinicaId }) => {
         setEvents(mapped);
       }
     } catch (error) {
-      console.error('Erro ao buscar agendamentos para o calendÃ¡rio:', error);
+      console.error('Erro ao buscar agendamentos para o calendário:', error);
     }
   };
 
@@ -69,10 +69,10 @@ const CalendarComponent: React.FC<CalendarProps> = ({ clinicaId }) => {
         defaultView={Views.MONTH}
         views={['month', 'week', 'day']}
         messages={{
-          next: "PrÃ³ximo",
+          next: "Próximo",
           previous: "Anterior",
           today: "Hoje",
-          month: "MÃªs",
+          month: "Mês",
           week: "Semana",
           day: "Dia"
         }}
