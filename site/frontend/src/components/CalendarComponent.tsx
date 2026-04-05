@@ -9,7 +9,7 @@ import './CalendarComponent.css';
 moment.locale('pt-br');
 const localizer = momentLocalizer(moment);
 
-const API_URL = 'http://jsceqezyy86wb3mz6pojr7kr.72.60.11.33.sslip.io/api';
+const API_URL = 'https://ia.mententenexus.tech:3001/api';
 
 interface Agendamento {
   id: number;

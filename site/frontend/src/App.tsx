@@ -19,7 +19,7 @@ import CalendarComponent from './components/CalendarComponent';
 import Login from './components/Login';
 
 const CLINICA_ID = '5537998145228';
-const API_URL = 'http://jsceqezyy86wb3mz6pojr7kr.72.60.11.33.sslip.io/api';
+const API_URL = 'https://ia.mententenexus.tech:3001/api';
 
 interface Cliente {
   id: number;
@@ -67,6 +67,7 @@ const App: React.FC = () => {
 
   const [novoHorario, setNovoHorario] = useState({ cliente_id: '', profissional_id: '', data_hora: '', status: 'pendente', observacoes: '' });
   const [novoCliente, setNovoCliente] = useState({ nome: '', telefone: '', email: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -147,6 +148,7 @@ const App: React.FC = () => {
 
   const handleCriarHorario = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const res = await fetch(`${API_URL}/agendamentos`, {
         method: 'POST',
@@ -158,14 +160,21 @@ const App: React.FC = () => {
         setNovoHorario({ cliente_id: '', profissional_id: '', data_hora: '', status: 'pendente', observacoes: '' });
         fetchData();
         loadNotificacoes();
+      } else {
+        const errorData = await res.json();
+        alert('Erro ao criar agendamento: ' + (errorData.error || 'Erro desconhecido'));
       }
     } catch (error) {
       console.error('Erro ao criar agendamento:', error);
+      alert('Erro de conexão ao criar agendamento');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCriarCliente = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const res = await fetch(`${API_URL}/clientes`, {
         method: 'POST',
@@ -176,9 +185,15 @@ const App: React.FC = () => {
         setShowModalNovoCliente(false);
         setNovoCliente({ nome: '', telefone: '', email: '' });
         fetchData();
+      } else {
+        const errorData = await res.json();
+        alert('Erro ao criar cliente: ' + (errorData.error || 'Erro desconhecido'));
       }
     } catch (error) {
       console.error('Erro ao criar cliente:', error);
+      alert('Erro de conexão ao criar cliente');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -450,7 +465,9 @@ const App: React.FC = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={() => setShowModalNovoHorario(false)}>Cancelar</button>
-                <button type="submit" className="btn-primary"><Plus size={18} /> Criar Horário</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Criando...' : <><Plus size={18} /> Criar Horário</>}
+                </button>
               </div>
             </form>
           </div>
@@ -498,7 +515,9 @@ const App: React.FC = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={() => setShowModalNovoCliente(false)}>Cancelar</button>
-                <button type="submit" className="btn-primary"><UserPlus size={18} /> Criar Cliente</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Criando...' : <><UserPlus size={18} /> Criar Cliente</>}
+                </button>
               </div>
             </form>
           </div>
