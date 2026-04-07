@@ -12,9 +12,7 @@ const PORT = process.env.PORT || 3001;
 const databaseUrl = process.env.DATABASE_URL || '';
 const pool = new Pool({
   connectionString: databaseUrl,
-  ssl: databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1') || databaseUrl === ''
-    ? false 
-    : { rejectUnauthorized: false }
+  ssl: false // Desativado para garantir compatibilidade na mesma VPS
 });
 
 if (!process.env.DATABASE_URL) {
