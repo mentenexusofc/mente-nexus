@@ -6,13 +6,32 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configuração do Banco de Dados usando DATABASE_URL do .env (SSL desativado)
+// Configuração do Banco de Dados usando DATABASE_URL do .env
+// NOTA: Para conexões remotas, tente SSL primeiro. Se falhar, ajuste conforme necessário.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-app.use(cors());
+const allowedOrigins = [
+  'https://ia.mentenexus.tech',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:3001'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'X-Clinica-ID', 'Authorization']
+}));
 app.use(express.json());
 
 // Middleware para validar o header X-Clinica-ID

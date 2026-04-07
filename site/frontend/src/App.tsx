@@ -19,7 +19,7 @@ import CalendarComponent from './components/CalendarComponent';
 import Login from './components/Login';
 
 const CLINICA_ID = '5537998145228';
-const API_URL = 'https://ia.mentenexus.tech:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.mentenexus.tech/api';
 
 interface Cliente {
   id: number;
