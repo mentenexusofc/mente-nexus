@@ -19,7 +19,7 @@ import CalendarComponent from './components/CalendarComponent';
 import Login from './components/Login';
 
 const CLINICA_ID = '5537998145228';
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.mentenexus.tech/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.mentenexus.tech';
 
 interface Cliente {
   id: number;
@@ -370,7 +370,7 @@ const App: React.FC = () => {
                 )}
                 
                 {showNotificacoes && (
-                  <div className="glass-card animate-fade-in" style={{ position: 'absolute', top: '55px', right: 0, width: '320px', zIndex: 1001, padding: '1rem', maxHeight: '400px', overflowY: 'auto' }}>
+                  <div className="glass-card animate-fade-in notification-dropdown" style={{ position: 'fixed', top: '60px', right: '10px', width: 'min(320px, calc(100vw - 20px))', zIndex: 1001, padding: '1rem', maxHeight: '400px', overflowY: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                       <h4 style={{ margin: 0, color: 'white' }}>Notificações</h4>
                       <button onClick={marcarTodasLidas} style={{ background: 'none', border: 'none', color: 'var(--accent-color)', fontSize: '0.75rem', cursor: 'pointer' }}>Marcar todas como lidas</button>

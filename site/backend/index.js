@@ -57,7 +57,7 @@ app.get('/', (req, res) => {
 // --- ROTAS DE CLÍNICAS (ADMIN) ---
 
 // Listar todas as clínicas (MASTER ADMIN)
-app.get('/api/clinicas', async (req, res) => {
+app.get('/clinicas', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM clinicas ORDER BY criado_em DESC');
     res.json(result.rows);
@@ -68,7 +68,7 @@ app.get('/api/clinicas', async (req, res) => {
 });
 
 // Criar nova clínica
-app.post('/api/clinicas', async (req, res) => {
+app.post('/clinicas', async (req, res) => {
   const { id, nome, email } = req.body;
   if (!id || !nome) return res.status(400).json({ error: 'ID (telefone) e Nome são obrigatórios' });
   try {
@@ -84,7 +84,7 @@ app.post('/api/clinicas', async (req, res) => {
 });
 
 // Excluir clínica
-app.delete('/api/clinicas/:id', async (req, res) => {
+app.delete('/clinicas/:id', async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM clinicas WHERE id = $1', [id]);
@@ -136,7 +136,7 @@ app.post('/webhook/n8n', async (req, res) => {
 });
 
 // Buscar cliente por telefone
-app.get('/api/clientes/busca/:telefone', validateClinicaHeader, async (req, res) => {
+app.get('/clientes/busca/:telefone', validateClinicaHeader, async (req, res) => {
   const { telefone } = req.params;
   const cleanTelefone = telefone.toString().replace(/\D/g, '');
   try {
@@ -153,7 +153,7 @@ app.get('/api/clientes/busca/:telefone', validateClinicaHeader, async (req, res)
 });
 
 // Listar clientes
-app.get('/api/clientes', validateClinicaHeader, async (req, res) => {
+app.get('/clientes', validateClinicaHeader, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM clientes WHERE clinica_id = $1 ORDER BY nome ASC',
@@ -167,7 +167,7 @@ app.get('/api/clientes', validateClinicaHeader, async (req, res) => {
 });
 
 // Criar cliente manualmente
-app.post('/api/clientes', validateClinicaHeader, async (req, res) => {
+app.post('/clientes', validateClinicaHeader, async (req, res) => {
   const { nome, telefone, email } = req.body;
   if (!nome || !telefone) return res.status(400).json({ error: 'Nome e telefone são obrigatórios' });
 
@@ -195,7 +195,7 @@ app.post('/api/clientes', validateClinicaHeader, async (req, res) => {
 });
 
 // Atualizar cliente
-app.put('/api/clientes/:id', validateClinicaHeader, async (req, res) => {
+app.put('/clientes/:id', validateClinicaHeader, async (req, res) => {
   const { id } = req.params;
   const { nome, telefone, email } = req.body;
   const cleanTelefone = telefone.toString().replace(/\D/g, '');
@@ -213,7 +213,7 @@ app.put('/api/clientes/:id', validateClinicaHeader, async (req, res) => {
 });
 
 // Excluir cliente
-app.delete('/api/clientes/:id', validateClinicaHeader, async (req, res) => {
+app.delete('/clientes/:id', validateClinicaHeader, async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM clientes WHERE id = $1 AND clinica_id = $2', [id, req.clinica_id]);
@@ -227,7 +227,7 @@ app.delete('/api/clientes/:id', validateClinicaHeader, async (req, res) => {
 // --- ROTAS DE PROFISSIONAIS ---
 
 // Listar profissionais
-app.get('/api/profissionais', validateClinicaHeader, async (req, res) => {
+app.get('/profissionais', validateClinicaHeader, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM profissionais WHERE clinica_id = $1 ORDER BY nome ASC',
@@ -241,7 +241,7 @@ app.get('/api/profissionais', validateClinicaHeader, async (req, res) => {
 });
 
 // Criar profissional
-app.post('/api/profissionais', validateClinicaHeader, async (req, res) => {
+app.post('/profissionais', validateClinicaHeader, async (req, res) => {
   const { nome, especialidade } = req.body;
   if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
   try {
@@ -257,7 +257,7 @@ app.post('/api/profissionais', validateClinicaHeader, async (req, res) => {
 });
 
 // Atualizar profissional
-app.put('/api/profissionais/:id', validateClinicaHeader, async (req, res) => {
+app.put('/profissionais/:id', validateClinicaHeader, async (req, res) => {
   const { id } = req.params;
   const { nome, especialidade } = req.body;
   try {
@@ -274,7 +274,7 @@ app.put('/api/profissionais/:id', validateClinicaHeader, async (req, res) => {
 });
 
 // Excluir profissional
-app.delete('/api/profissionais/:id', validateClinicaHeader, async (req, res) => {
+app.delete('/profissionais/:id', validateClinicaHeader, async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query('DELETE FROM profissionais WHERE id = $1 AND clinica_id = $2', [id, req.clinica_id]);
@@ -288,7 +288,7 @@ app.delete('/api/profissionais/:id', validateClinicaHeader, async (req, res) => 
 // --- ROTAS DE AGENDAMENTOS ---
 
 // Listar ocupação / disponibilidade simples
-app.get('/api/disponibilidade', validateClinicaHeader, async (req, res) => {
+app.get('/disponibilidade', validateClinicaHeader, async (req, res) => {
   const { data, profissional_id } = req.query;
   if (!data || !profissional_id) return res.status(400).json({ error: 'Data e profissional_id são obrigatórios' });
 
@@ -313,7 +313,7 @@ app.get('/api/disponibilidade', validateClinicaHeader, async (req, res) => {
 });
 
 // Listar todos os agendamentos da clínica
-app.get('/api/agendamentos', validateClinicaHeader, async (req, res) => {
+app.get('/agendamentos', validateClinicaHeader, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -334,7 +334,7 @@ app.get('/api/agendamentos', validateClinicaHeader, async (req, res) => {
 });
 
 // Criar agendamento
-app.post('/api/agendamentos', validateClinicaHeader, async (req, res) => {
+app.post('/agendamentos', validateClinicaHeader, async (req, res) => {
   const { cliente_id, profissional_id, data_hora, status, observacoes } = req.body;
 
   if (!cliente_id || !data_hora || !profissional_id) {
@@ -356,7 +356,7 @@ app.post('/api/agendamentos', validateClinicaHeader, async (req, res) => {
 });
 
 // Atualizar agendamento
-app.put('/api/agendamentos/:id', validateClinicaHeader, async (req, res) => {
+app.put('/agendamentos/:id', validateClinicaHeader, async (req, res) => {
   const { id } = req.params;
   const { cliente_id, profissional_id, data_hora, status, observacoes } = req.body;
 
@@ -377,7 +377,7 @@ app.put('/api/agendamentos/:id', validateClinicaHeader, async (req, res) => {
 });
 
 // Excluir agendamento
-app.delete('/api/agendamentos/:id', validateClinicaHeader, async (req, res) => {
+app.delete('/agendamentos/:id', validateClinicaHeader, async (req, res) => {
   const { id } = req.params;
 
   try {
