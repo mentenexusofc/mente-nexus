@@ -40,7 +40,10 @@ interface Agendamento {
 interface Profissional {
   id: number;
   nome: string;
-  especialidade?: string;
+  area?: string;
+  diasTrabalho?: string[];
+  horariosTrabalho?: string;
+  capacidadeAtendimento?: number;
 }
 
 interface Notificacao {
@@ -62,11 +65,13 @@ const App: React.FC = () => {
   const [showNotificacoes, setShowNotificacoes] = useState(false);
   const [showModalNovoHorario, setShowModalNovoHorario] = useState(false);
   const [showModalNovoCliente, setShowModalNovoCliente] = useState(false);
+  const [showModalNovoProfissional, setShowModalNovoProfissional] = useState(false);
   const [clienteFilter, setClienteFilter] = useState('');
   const notifRef = useRef<HTMLDivElement>(null);
 
   const [novoHorario, setNovoHorario] = useState({ cliente_id: '', profissional_id: '', data_hora: '', status: 'pendente', observacoes: '' });
   const [novoCliente, setNovoCliente] = useState({ nome: '', telefone: '', email: '' });
+  const [novoProfissional, setNovoProfissional] = useState({ nome: '', area: '', diasTrabalho: [], horariosTrabalho: '', capacidadeAtendimento: 1 });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -197,6 +202,37 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCriarProfissional = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      // Convert array to comma-separated string for storage
+      const profissionalData = {
+        ...novoProfissional,
+        diasTrabalho: novoProfissional.diasTrabalho.join(',')
+      };
+      
+      const res = await fetch(`${API_URL}/profissionais`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Clinica-ID': CLINICA_ID },
+        body: JSON.stringify(profissionalData)
+      });
+      if (res.ok) {
+        setShowModalNovoProfissional(false);
+        setNovoProfissional({ nome: '', area: '', diasTrabalho: [], horariosTrabalho: '', capacidadeAtendimento: 1 });
+        fetchProfissionais(); // Refresh the professionals list
+      } else {
+        const errorData = await res.json();
+        alert('Erro ao criar profissional: ' + (errorData.error || 'Erro desconhecido'));
+      }
+    } catch (error) {
+      console.error('Erro ao criar profissional:', error);
+      alert('Erro de conexão ao criar profissional');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const clientesFiltrados = clientes.filter(c => 
     c.nome.toLowerCase().includes(clienteFilter.toLowerCase())
   );
@@ -229,97 +265,139 @@ const App: React.FC = () => {
 
     const { realizados, pendentes, totalClientes } = dashboardData();
 
-    switch (activeTab) {
-      case 'Dashboard':
-        return (
-          <div className="dashboard-grid animate-fade-in">
-            <div className="glass-card">
-              <h3>Agendamentos de Hoje</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Resumo da sua clínica hoje.</p>
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <span className="status-badge status-check">{realizados} Realizados</span>
-                <span className="status-badge status-pending">{pendentes} Pendentes</span>
-              </div>
-            </div>
-            <div className="glass-card">
-              <h3>Total de Clientes</h3>
-              <div style={{ fontSize: '2.5rem', fontWeight: '800', margin: '1rem 0' }}>{totalClientes}</div>
-              <p style={{ color: '#4ade80', fontSize: '0.85rem' }}>Cadastrados na base Mente Nexus</p>
-            </div>
-            <div className="glass-card">
-              <h3>Status da Automação</h3>
-              <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: 12, height: 12, background: '#4ade80', borderRadius: '50%', boxShadow: '0 0 10px #4ade80' }}></div>
-                <span style={{ fontWeight: 600 }}>Online - WhatsApp Conectado</span>
-              </div>
-            </div>
-          </div>
-        );
-      case 'Agenda':
-        return (
-          <div className="agenda-container animate-fade-in">
+     switch (activeTab) {
+       case 'Dashboard':
+         return (
+           <div className="dashboard-grid animate-fade-in">
+             <div className="glass-card">
+               <h3>Agendamentos de Hoje</h3>
+               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Resumo da sua clínica hoje.</p>
+               <div style={{ display: 'flex', gap: '15px' }}>
+                 <span className="status-badge status-check">{realizados} Realizados</span>
+                 <span className="status-badge status-pending">{pendentes} Pendentes</span>
+               </div>
+             </div>
+             <div className="glass-card">
+               <h3>Total de Clientes</h3>
+               <div style={{ fontSize: '2.5rem', fontWeight: '800', margin: '1rem 0' }}>{totalClientes}</div>
+               <p style={{ color: '#4ade80', fontSize: '0.85rem' }}>Cadastrados na base Mente Nexus</p>
+             </div>
+             <div className="glass-card">
+               <h3>Status da Automação</h3>
+               <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                 <div style={{ width: 12, height: 12, background: '#4ade80', borderRadius: '50%', boxShadow: '0 0 10px #4ade80' }}></div>
+                 <span style={{ fontWeight: 600 }}>Online - WhatsApp Conectado</span>
+               </div>
+             </div>
+           </div>
+         );
+       case 'Agenda':
+         return (
+           <div className="agenda-container animate-fade-in">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+               <div>
+                 <h2>Agenda de Atendimentos</h2>
+                 <p style={{ color: 'var(--text-secondary)' }}>Gerencie horários e profissionais.</p>
+               </div>
+               <button className="nav-item active" style={{ padding: '0.8rem 1.5rem' }} onClick={() => setShowModalNovoHorario(true)}>
+                 <Plus size={20}/> Novo Horário
+               </button>
+             </div>
+             <CalendarComponent clinicaId={CLINICA_ID} />
+           </div>
+         );
+       case 'Clientes':
+         return (
+           <div className="glass-card animate-fade-in">
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <div>
-                <h2>Agenda de Atendimentos</h2>
-                <p style={{ color: 'var(--text-secondary)' }}>Gerencie horários e profissionais.</p>
-              </div>
-              <button className="nav-item active" style={{ padding: '0.8rem 1.5rem' }} onClick={() => setShowModalNovoHorario(true)}>
-                <Plus size={20}/> Novo Horário
-              </button>
-            </div>
-            <CalendarComponent clinicaId={CLINICA_ID} />
-          </div>
-        );
-      case 'Clientes':
-        return (
-          <div className="glass-card animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2>Gestão de Clientes</h2>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '8px 16px', alignItems: 'center', gap: '12px' }}>
-                  <Search size={18} color="var(--text-secondary)"/>
-                  <input type="text" placeholder="Filtrar por nome..." value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} style={{ background: 'none', border: 'none', color: 'white', outline: 'none', width: '200px' }} />
-                </div>
-                <button className="nav-item active" style={{ padding: '0.8rem 1.5rem' }} onClick={() => setShowModalNovoCliente(true)}>
-                  <UserPlus size={20}/> Novo Cliente
-                </button>
-              </div>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome do Cliente</th>
-                  <th>Telefone / WhatsApp</th>
-                  <th>E-mail</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {clientesFiltrados.map(c => (
-                  <tr key={c.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width:36, height:36, background: 'var(--accent-color)', borderRadius: '10px', display: 'flex', alignItems:'center', justifyContent:'center', fontWeight:'800', color: 'white' }}>{(c.nome || '?')[0]}</div>
-                        <span style={{ fontWeight: 600 }}>{c.nome}</span>
-                      </div>
-                    </td>
-                    <td>{c.telefone}</td>
-                    <td>{c.email || '-'}</td>
-                    <td>
-                      <span className="status-badge status-check">Ativo</span>
-                    </td>
-                    <td><MoreHorizontal size={20} cursor="pointer" color="var(--text-secondary)"/></td>
-                  </tr>
-                ))}
-                {clientesFiltrados.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem' }}>Nenhum cliente disponível.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        );
-      default:
-        return <div className="glass-card animate-fade-in">Módulo em desenvolvimento...</div>;
-    }
+               <h2>Gestão de Clientes</h2>
+               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                 <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '8px 16px', alignItems: 'center', gap: '12px' }}>
+                   <Search size={18} color="var(--text-secondary)"/>
+                   <input type="text" placeholder="Filtrar por nome..." value={clienteFilter} onChange={(e) => setClienteFilter(e.target.value)} style={{ background: 'none', border: 'none', color: 'white', outline: 'none', width: '200px' }} />
+                 </div>
+                 <button className="nav-item active" style={{ padding: '0.8rem 1.5rem' }} onClick={() => setShowModalNovoCliente(true)}>
+                   <UserPlus size={20}/> Novo Cliente
+                 </button>
+               </div>
+             </div>
+             <table>
+               <thead>
+                 <tr>
+                   <th>Nome do Cliente</th>
+                   <th>Telefone / WhatsApp</th>
+                   <th>E-mail</th>
+                   <th>Status</th>
+                   <th></th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {clientesFiltrados.map(c => (
+                   <tr key={c.id}>
+                     <td>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                         <div style={{ width:36, height:36, background: 'var(--accent-color)', borderRadius: '10px', display: 'flex', alignItems:'center', justifyContent:'center', fontWeight:'800', color: 'white' }}>{(c.nome || '?')[0]}</div>
+                         <span style={{ fontWeight: 600 }}>{c.nome}</span>
+                       </div>
+                     </td>
+                     <td>{c.telefone}</td>
+                     <td>{c.email || '-'}</td>
+                     <td>
+                       <span className="status-badge status-check">Ativo</span>
+                     </td>
+                     <td><MoreHorizontal size={20} cursor="pointer" color="var(--text-secondary)"/></td>
+                   </tr>
+                 ))}
+                 {clientesFiltrados.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem' }}>Nenhum cliente disponível.</td></tr>}
+               </tbody>
+             </table>
+           </div>
+         );
+       case 'Profissionais':
+         return (
+           <div className="glass-card animate-fade-in">
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+               <h2>Gestão de Profissionais</h2>
+               <button className="nav-item active" style={{ padding: '0.8rem 1.5rem' }} onClick={() => setShowModalNovoProfissional(true)}>
+                 <UserPlus size={20}/> Novo Profissional
+               </button>
+             </div>
+             <table>
+               <thead>
+                 <tr>
+                   <th>Nome</th>
+                   <th>Área/Especialidade</th>
+                   <th>Dias de Trabalho</th>
+                   <th>Horário de Trabalho</th>
+                   <th>Capacidade</th>
+                   <th></th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {profissionais.map(p => (
+                   <tr key={p.id}>
+                     <td>{p.nome}</td>
+                     <td>{p.area || '-'}</td>
+                     <td>
+                       {p.diasTrabalho && p.diasTrabalho.length > 0 ? (
+                         <span>{p.diasTrabalho.map(d => d).join(', ')}</span>
+                       ) : (
+                         <span>-</span>
+                       )}
+                     </td>
+                     <td>{p.horariosTrabalho || '-'}</td>
+                     <td>{p.capacidadeAtendimento || 1}</td>
+                     <td><MoreHorizontal size={20} cursor="pointer" color="var(--text-secondary)"/></td>
+                   </tr>
+                 ))}
+                 {profissionais.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '3rem' }}>Nenhum profissional disponível.</td></tr>}
+               </tbody>
+             </table>
+           </div>
+         );
+       default:
+         return <div className="glass-card animate-fade-in">Módulo em desenvolvimento...</div>;
+     }
   };
 
   if (!isLoggedIn) {
@@ -339,6 +417,9 @@ const App: React.FC = () => {
           </div>
           <div className={`nav-item ${activeTab === 'Clientes' ? 'active' : ''}`} onClick={() => setActiveTab('Clientes')}>
             <Users size={22} /> Clientes
+          </div>
+          <div className={`nav-item ${activeTab === 'Profissionais' ? 'active' : ''}`} onClick={() => setActiveTab('Profissionais')}>
+            <Users size={22} /> Profissionais
           </div>
           <div className={`nav-item ${activeTab === 'Configuracoes' ? 'active' : ''}`} onClick={() => setActiveTab('Configuracoes')}>
             <Settings size={22} /> Configurações
@@ -517,6 +598,196 @@ const App: React.FC = () => {
                 <button type="button" className="btn-cancel" onClick={() => setShowModalNovoCliente(false)}>Cancelar</button>
                 <button type="submit" className="btn-primary" disabled={isSubmitting}>
                   {isSubmitting ? 'Criando...' : <><UserPlus size={18} /> Criar Cliente</>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {showModalNovoProfissional && (
+        <div className="modal-overlay" onClick={() => setShowModalNovoProfissional(false)}>
+          <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2>Novo Profissional</h2>
+              <button className="modal-close" onClick={() => setShowModalNovoProfissional(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCriarProfissional}>
+              <div className="form-group">
+                <label>Nome</label>
+                <input 
+                  type="text" 
+                  value={novoProfissional.nome} 
+                  onChange={e => setNovoProfissional({ ...novoProfissional, nome: e.target.value })}
+                  required
+                  placeholder="Nome completo"
+                />
+              </div>
+              <div className="form-group">
+                <label>Área/Especialidade</label>
+                <input 
+                  type="text" 
+                  value={novoProfissional.area} 
+                  onChange={e => setNovoProfissional({ ...novoProfissional, area: e.target.value })}
+                  placeholder="Ex: Psicologia, Fisioterapia, Nutrição"
+                />
+              </div>
+              <div className="form-group">
+                <label>Dias da Semana que Trabalha</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input 
+                      type="checkbox" 
+                      value="segunda" 
+                      checked={novoProfissional.diasTrabalho.includes('segunda')}
+                      onChange={e => {
+                        const dias = [...novoProfissional.diasTrabalho];
+                        if (e.target.checked) {
+                          dias.push('segunda');
+                        } else {
+                          const index = dias.indexOf('segunda');
+                          if (index > -1) dias.splice(index, 1);
+                        }
+                        setNovoProfissional({ ...novoProfissional, diasTrabalho: dias });
+                      }}
+                    />
+                    Segunda
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input 
+                      type="checkbox" 
+                      value="terca" 
+                      checked={novoProfissional.diasTrabalho.includes('terca')}
+                      onChange={e => {
+                        const dias = [...novoProfissional.diasTrabalho];
+                        if (e.target.checked) {
+                          dias.push('terca');
+                        } else {
+                          const index = dias.indexOf('terca');
+                          if (index > -1) dias.splice(index, 1);
+                        }
+                        setNovoProfissional({ ...novoProfissional, diasTrabalho: dias });
+                      }}
+                    />
+                    Terça
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input 
+                      type="checkbox" 
+                      value="quarta" 
+                      checked={novoProfissional.diasTrabalho.includes('quarta')}
+                      onChange={e => {
+                        const dias = [...novoProfissional.diasTrabalho];
+                        if (e.target.checked) {
+                          dias.push('quarta');
+                        } else {
+                          const index = dias.indexOf('quarta');
+                          if (index > -1) dias.splice(index, 1);
+                        }
+                        setNovoProfissional({ ...novoProfissional, diasTrabalho: dias });
+                      }}
+                    />
+                    Quarta
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input 
+                      type="checkbox" 
+                      value="quinta" 
+                      checked={novoProfissional.diasTrabalho.includes('quinta')}
+                      onChange={e => {
+                        const dias = [...novoProfissional.diasTrabalho];
+                        if (e.target.checked) {
+                          dias.push('quinta');
+                        } else {
+                          const index = dias.indexOf('quinta');
+                          if (index > -1) dias.splice(index, 1);
+                        }
+                        setNovoProfissional({ ...novoProfissional, diasTrabalho: dias });
+                      }}
+                    />
+                    Quinta
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input 
+                      type="checkbox" 
+                      value="sexta" 
+                      checked={novoProfissional.diasTrabalho.includes('sexta')}
+                      onChange={e => {
+                        const dias = [...novoProfissional.diasTrabalho];
+                        if (e.target.checked) {
+                          dias.push('sexta');
+                        } else {
+                          const index = dias.indexOf('sexta');
+                          if (index > -1) dias.splice(index, 1);
+                        }
+                        setNovoProfissional({ ...novoProfissional, diasTrabalho: dias });
+                      }}
+                    />
+                    Sexta
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input 
+                      type="checkbox" 
+                      value="sabado" 
+                      checked={novoProfissional.diasTrabalho.includes('sabado')}
+                      onChange={e => {
+                        const dias = [...novoProfissional.diasTrabalho];
+                        if (e.target.checked) {
+                          dias.push('sabado');
+                        } else {
+                          const index = dias.indexOf('sabado');
+                          if (index > -1) dias.splice(index, 1);
+                        }
+                        setNovoProfissional({ ...novoProfissional, diasTrabalho: dias });
+                      }}
+                    />
+                    Sábado
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input 
+                      type="checkbox" 
+                      value="domingo" 
+                      checked={novoProfissional.diasTrabalho.includes('domingo')}
+                      onChange={e => {
+                        const dias = [...novoProfissional.diasTrabalho];
+                        if (e.target.checked) {
+                          dias.push('domingo');
+                        } else {
+                          const index = dias.indexOf('domingo');
+                          if (index > -1) dias.splice(index, 1);
+                        }
+                        setNovoProfissional({ ...novoProfissional, diasTrabalho: dias });
+                      }}
+                    />
+                    Domingo
+                  </label>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Horário de Trabalho</label>
+                <input 
+                  type="text" 
+                  value={novoProfissional.horariosTrabalho} 
+                  onChange={e => setNovoProfissional({ ...novoProfissional, horariosTrabalho: e.target.value })}
+                  placeholder="Ex: 08:00 às 18:00"
+                />
+              </div>
+              <div className="form-group">
+                <label>Quantidade de Pessoas de Uma Vez</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  value={novoProfissional.capacidadeAtendimento} 
+                  onChange={e => setNovoProfissional({ ...novoProfissional, capacidadeAtendimento: parseInt(e.target.value) || 1 })}
+                  placeholder="1"
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowModalNovoProfissional(false)}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Criando...' : <><UserPlus size={18} /> Criar Profissional</>}
                 </button>
               </div>
             </form>
