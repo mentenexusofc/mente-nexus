@@ -25,6 +25,13 @@ async function createTables() {
         clinica_id VARCHAR(20) REFERENCES clinicas(id) ON DELETE CASCADE,
         nome VARCHAR(255) NOT NULL,
         especialidade VARCHAR(255),
+        dias_trabalho VARCHAR(100),
+        horario_inicio TIME,
+        horario_fim TIME,
+        almoco_inicio TIME,
+        almoco_fim TIME,
+        duracao_atendimento INTEGER DEFAULT 50,
+        capacidade_atendimento INTEGER DEFAULT 1,
         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 

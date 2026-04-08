@@ -273,15 +273,30 @@ app.get('/profissionais', validateClinicaHeader, async (req, res) => {
   }
 });
 
+// Buscar profissional por ID (para n8n)
+app.get('/profissionais/:id', validateClinicaHeader, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM profissionais WHERE id = $1 AND clinica_id = $2',
+      [req.params.id, req.clinica_id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Profissional não encontrado' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('SERVER ERROR:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Criar profissional
 app.post('/profissionais', validateClinicaHeader, async (req, res) => {
-  const { nome, especialidade } = req.body;
+  const { nome, especialidade, dias_trabalho, horario_inicio, horario_fim, almoco_inicio, almoco_fim, duracao_atendimento, capacidade_atendimento } = req.body;
   if (!nome) return res.status(400).json({ error: 'Nome é obrigatório' });
   try {
     const result = await pool.query(`
-      INSERT INTO profissionais (clinica_id, nome, especialidade)
-      VALUES ($1, $2, $3) RETURNING *
-    `, [req.clinica_id, nome, especialidade]);
+      INSERT INTO profissionais (clinica_id, nome, especialidade, dias_trabalho, horario_inicio, horario_fim, almoco_inicio, almoco_fim, duracao_atendimento, capacidade_atendimento)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
+    `, [req.clinica_id, nome, especialidade, dias_trabalho, horario_inicio, horario_fim, almoco_inicio, almoco_fim, duracao_atendimento || 50, capacidade_atendimento || 1]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('SERVER ERROR:', error);
@@ -295,12 +310,21 @@ app.post('/profissionais', validateClinicaHeader, async (req, res) => {
 // Atualizar profissional
 app.put('/profissionais/:id', validateClinicaHeader, async (req, res) => {
   const { id } = req.params;
-  const { nome, especialidade } = req.body;
+  const { nome, especialidade, dias_trabalho, horario_inicio, horario_fim, almoco_inicio, almoco_fim, duracao_atendimento, capacidade_atendimento } = req.body;
   try {
     const result = await pool.query(`
-      UPDATE profissionais SET nome = $1, especialidade = $2
-      WHERE id = $3 AND clinica_id = $4 RETURNING *
-    `, [nome, especialidade, id, req.clinica_id]);
+      UPDATE profissionais SET 
+        nome = $1, 
+        especialidade = $2,
+        dias_trabalho = $3,
+        horario_inicio = $4,
+        horario_fim = $5,
+        almoco_inicio = $6,
+        almoco_fim = $7,
+        duracao_atendimento = $8,
+        capacidade_atendimento = $9
+      WHERE id = $10 AND clinica_id = $11 RETURNING *
+    `, [nome, especialidade, dias_trabalho, horario_inicio, horario_fim, almoco_inicio, almoco_fim, duracao_atendimento || 50, capacidade_atendimento || 1, id, req.clinica_id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Profissional não encontrado' });
     res.json(result.rows[0]);
   } catch (error) {
@@ -354,6 +378,90 @@ app.get('/disponibilidade', validateClinicaHeader, async (req, res) => {
       error: error.message || 'Erro interno desconhecido',
       details: error.code || null
     });
+  }
+});
+
+// Calcular horários disponíveis para n8n (baseado no horário do profissional)
+app.get('/disponibilidade/:profissional_id', validateClinicaHeader, async (req, res) => {
+  const { profissional_id } = req.params;
+  const { data } = req.query;
+  if (!data) return res.status(400).json({ error: 'Data é obrigatória' });
+
+  try {
+    const profResult = await pool.query(
+      'SELECT * FROM profissionais WHERE id = $1 AND clinica_id = $2',
+      [profissional_id, req.clinica_id]
+    );
+    
+    if (profResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Profissional não encontrado' });
+    }
+
+    const prof = profResult.rows[0];
+    
+    const agendamentosResult = await pool.query(`
+      SELECT TO_CHAR(data_hora, 'HH24:MI') as hora
+      FROM agendamentos 
+      WHERE clinica_id = $1 
+      AND profissional_id = $2 
+      AND DATE(data_hora) = $3
+    `, [req.clinica_id, profissional_id, data]);
+    
+    const ocupados = agendamentosResult.rows.map(r => r.hora);
+    
+    const diaSemana = new Date(data).toLocaleDateString('pt-BR', { weekday: 'lowercase' });
+    const diasPermitidos = prof.dias_trabalho ? prof.dias_trabalho.split(',') : [];
+    
+    if (!diasPermitidos.includes(diaSemana)) {
+      return res.json({ 
+        disponivel: false, 
+        mensagem: `Profissional não atende neste dia (${diaSemana})`,
+        horarios: [] 
+      });
+    }
+
+    const horariosLivres = [];
+    if (prof.horario_inicio && prof.horario_fim) {
+      let atual = prof.horario_inicio;
+      const fim = prof.horario_fim;
+      const duracao = prof.duracao_atendimento || 50;
+      
+      while (atual < fim) {
+        const horaStr = atual.substring(0, 5);
+        
+        let isOcupado = ocupados.includes(horaStr);
+        
+        if (prof.almoco_inicio && prof.almoco_fim) {
+          if (atual >= prof.almoco_inicio && atual < prof.almoco_fim) {
+            isOcupado = true;
+          }
+        }
+        
+        if (!isOcupado) {
+          horariosLivres.push(horaStr);
+        }
+        
+        const [h, m] = atual.split(':').map(Number);
+        const totalMinutos = h * 60 + m + duracao;
+        const newH = Math.floor(totalMinutos / 60);
+        const newM = totalMinutos % 60;
+        atual = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+      }
+    }
+
+    res.json({
+      disponivel: horariosLivres.length > 0,
+      profissional: prof.nome,
+      duracao_atendimento: prof.duracao_atendimento || 50,
+      horarios: horariosLivres,
+      ocupado: ocupados.length,
+      almoco_inicio: prof.almoco_inicio ? prof.almoco_inicio.substring(0, 5) : null,
+      almoco_fim: prof.almoco_fim ? prof.almoco_fim.substring(0, 5) : null,
+      horario_trabalho: `${prof.horario_inicio ? prof.horario_inicio.substring(0, 5) : ''} às ${prof.horario_fim ? prof.horario_fim.substring(0, 5) : ''}`
+    });
+  } catch (error) {
+    console.error('SERVER ERROR:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

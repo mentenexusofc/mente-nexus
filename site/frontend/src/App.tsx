@@ -12,7 +12,9 @@ import {
   Loader2,
   LogOut,
   X,
-  UserPlus
+  UserPlus,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import './App.css';
 import CalendarComponent from './components/CalendarComponent';
@@ -41,9 +43,15 @@ interface Profissional {
   id: number;
   nome: string;
   area?: string;
+  especialidade?: string;
   diasTrabalho?: string[];
-  horariosTrabalho?: string;
-  capacidadeAtendimento?: number;
+  dias_trabalho?: string;
+  horario_inicio?: string;
+  horario_fim?: string;
+  almoco_inicio?: string;
+  almoco_fim?: string;
+  duracao_atendimento?: number;
+  capacidade_atendimento?: number;
 }
 
 interface Notificacao {
@@ -71,8 +79,16 @@ const App: React.FC = () => {
 
   const [novoHorario, setNovoHorario] = useState({ cliente_id: '', profissional_id: '', data_hora: '', status: 'pendente', observacoes: '' });
   const [novoCliente, setNovoCliente] = useState({ nome: '', telefone: '', email: '' });
-  const [novoProfissional, setNovoProfissional] = useState({ nome: '', area: '', diasTrabalho: [], horariosTrabalho: '', capacidadeAtendimento: 1 });
+  const [novoProfissional, setNovoProfissional] = useState({ nome: '', area: '', diasTrabalho: [] as string[], horario_inicio: '08:00', horario_fim: '18:00', almoco_inicio: '12:00', almoco_fim: '13:00', duracao_atendimento: 50, capacidade_atendimento: 1 });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [editingProfissional, setEditingProfissional] = useState<Profissional | null>(null);
+  const [showModalEditCliente, setShowModalEditCliente] = useState(false);
+  const [showModalEditProfissional, setShowModalEditProfissional] = useState(false);
+  const dropdownRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const [horariosDisponiveis, setHorariosDisponiveis] = useState<string[]>([]);
+  const [profissionalInfo, setProfissionalInfo] = useState<{ duracao: number; almoco: string; horario: string } | null>(null);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -87,6 +103,11 @@ const App: React.FC = () => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setShowNotificacoes(false);
       }
+      Object.keys(dropdownRef.current).forEach(key => {
+        if (dropdownRef.current[key] && !dropdownRef.current[key]?.contains(e.target as Node)) {
+          setOpenDropdown(null);
+        }
+      });
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -111,13 +132,29 @@ const App: React.FC = () => {
     }
   };
 
+  const fetchClientes = async () => {
+    try {
+      const res = await fetch(`${API_URL}/clientes`, { headers: { 'X-Clinica-ID': CLINICA_ID } });
+      if (!res.ok) throw new Error('Failed to fetch');
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : [];
+      setClientes(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error);
+      setClientes([]);
+    }
+  };
+
   const fetchProfissionais = async () => {
     try {
       const res = await fetch(`${API_URL}/profissionais`, { headers: { 'X-Clinica-ID': CLINICA_ID } });
-      const data = await res.json();
+      if (!res.ok) throw new Error('Failed to fetch');
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : [];
       setProfissionais(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erro ao buscar profissionais:', error);
+      setProfissionais([]);
     }
   };
 
@@ -163,6 +200,8 @@ const App: React.FC = () => {
       if (res.ok) {
         setShowModalNovoHorario(false);
         setNovoHorario({ cliente_id: '', profissional_id: '', data_hora: '', status: 'pendente', observacoes: '' });
+        setHorariosDisponiveis([]);
+        setProfissionalInfo(null);
         fetchData();
         loadNotificacoes();
       } else {
@@ -174,6 +213,38 @@ const App: React.FC = () => {
       alert('Erro de conexão ao criar agendamento');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const buscarHorariosDisponiveis = async (profissionalId: string, data: string) => {
+    if (!profissionalId || !data) {
+      setHorariosDisponiveis([]);
+      setProfissionalInfo(null);
+      return;
+    }
+    
+    try {
+      const dataFormatada = data.split('T')[0];
+      const res = await fetch(`${API_URL}/disponibilidade/${profissionalId}?data=${dataFormatada}`, {
+        headers: { 'X-Clinica-ID': CLINICA_ID }
+      });
+      
+      if (res.ok) {
+        const dataResult = await res.json();
+        setHorariosDisponiveis(dataResult.horarios || []);
+        setProfissionalInfo({
+          duracao: dataResult.duracao_atendimento || 50,
+          almoco: dataResult.almoco_inicio && dataResult.almoco_fim ? `${dataResult.almoco_inicio} - ${dataResult.almoco_fim}` : '',
+          horario: dataResult.horario_trabalho || ''
+        });
+      } else {
+        setHorariosDisponiveis([]);
+        setProfissionalInfo(null);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar horários:', error);
+      setHorariosDisponiveis([]);
+      setProfissionalInfo(null);
     }
   };
 
@@ -206,10 +277,16 @@ const App: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Convert array to comma-separated string for storage
       const profissionalData = {
-        ...novoProfissional,
-        diasTrabalho: novoProfissional.diasTrabalho.join(',')
+        nome: novoProfissional.nome,
+        especialidade: novoProfissional.area,
+        dias_trabalho: novoProfissional.diasTrabalho.join(','),
+        horario_inicio: novoProfissional.horario_inicio,
+        horario_fim: novoProfissional.horario_fim,
+        almoco_inicio: novoProfissional.almoco_inicio,
+        almoco_fim: novoProfissional.almoco_fim,
+        duracao_atendimento: novoProfissional.duracao_atendimento,
+        capacidade_atendimento: novoProfissional.capacidade_atendimento
       };
       
       const res = await fetch(`${API_URL}/profissionais`, {
@@ -219,8 +296,8 @@ const App: React.FC = () => {
       });
       if (res.ok) {
         setShowModalNovoProfissional(false);
-        setNovoProfissional({ nome: '', area: '', diasTrabalho: [], horariosTrabalho: '', capacidadeAtendimento: 1 });
-        fetchProfissionais(); // Refresh the professionals list
+        setNovoProfissional({ nome: '', area: '', diasTrabalho: [], horario_inicio: '08:00', horario_fim: '18:00', almoco_inicio: '12:00', almoco_fim: '13:00', duracao_atendimento: 50, capacidade_atendimento: 1 });
+        fetchProfissionais();
       } else {
         const errorData = await res.json();
         alert('Erro ao criar profissional: ' + (errorData.error || 'Erro desconhecido'));
@@ -231,6 +308,133 @@ const App: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEditarCliente = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCliente) return;
+    setIsSubmitting(true);
+    const originalShow = showModalEditCliente;
+    try {
+      const res = await fetch(`${API_URL}/clientes/${editingCliente.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Clinica-ID': CLINICA_ID },
+        body: JSON.stringify({ nome: editingCliente.nome, telefone: editingCliente.telefone, email: editingCliente.email || '' })
+      });
+      if (res.ok) {
+        setShowModalEditCliente(false);
+        setEditingCliente(null);
+        fetchClientes();
+      } else {
+        setShowModalEditCliente(originalShow);
+        alert('Erro ao editar cliente');
+      }
+    } catch (error) {
+      setShowModalEditCliente(originalShow);
+      console.error('Erro ao editar cliente:', error);
+      alert('Erro de conexão');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleExcluirCliente = async (id: number) => {
+    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+    try {
+      const res = await fetch(`${API_URL}/clientes/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Clinica-ID': CLINICA_ID }
+      });
+      if (res.ok) {
+        setOpenDropdown(null);
+        fetchData();
+      } else {
+        alert('Erro ao excluir cliente');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+    }
+  };
+
+  const handleEditarProfissional = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProfissional) return;
+    setIsSubmitting(true);
+    const originalShow = showModalEditProfissional;
+    try {
+      const res = await fetch(`${API_URL}/profissionais/${editingProfissional.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Clinica-ID': CLINICA_ID },
+        body: JSON.stringify({
+          nome: editingProfissional.nome,
+          especialidade: editingProfissional.area,
+          dias_trabalho: editingProfissional.diasTrabalho?.join(',') || '',
+          horario_inicio: editingProfissional.horario_inicio || null,
+          horario_fim: editingProfissional.horario_fim || null,
+          almoco_inicio: editingProfissional.almoco_inicio || null,
+          almoco_fim: editingProfissional.almoco_fim || null,
+          duracao_atendimento: editingProfissional.duracao_atendimento || 50,
+          capacidade_atendimento: editingProfissional.capacidade_atendimento || 1
+        })
+      });
+      if (res.ok) {
+        setShowModalEditProfissional(false);
+        setEditingProfissional(null);
+        fetchProfissionais();
+      } else {
+        setShowModalEditProfissional(originalShow);
+        const errorText = await res.text();
+        console.error('Erro ao editar profissional:', errorText);
+        alert('Erro ao editar profissional');
+      }
+    } catch (error) {
+      setShowModalEditProfissional(originalShow);
+      console.error('Erro ao editar profissional:', error);
+      alert('Erro de conexão');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleExcluirProfissional = async (id: number) => {
+    if (!confirm('Tem certeza que deseja excluir este profissional?')) return;
+    try {
+      const res = await fetch(`${API_URL}/profissionais/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Clinica-ID': CLINICA_ID }
+      });
+      if (res.ok) {
+        setOpenDropdown(null);
+        fetchProfissionais();
+      } else {
+        alert('Erro ao excluir profissional');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir profissional:', error);
+    }
+  };
+
+  const openEditCliente = (cliente: Cliente) => {
+    setEditingCliente({ ...cliente });
+    setShowModalEditCliente(true);
+    setOpenDropdown(null);
+  };
+
+  const openEditProfissional = (profissional: Profissional) => {
+    const diasArray = profissional.diasTrabalho || (profissional as any).dias_trabalho?.split(',') || [];
+    setEditingProfissional({ 
+      ...profissional, 
+      area: profissional.area || (profissional as any).especialidade,
+      diasTrabalho: diasArray,
+      horario_inicio: profissional.horario_inicio || (profissional as any).horario_inicio || '08:00',
+      horario_fim: profissional.horario_fim || (profissional as any).horario_fim || '18:00',
+      almoco_inicio: profissional.almoco_inicio || (profissional as any).almoco_inicio || '12:00',
+      almoco_fim: profissional.almoco_fim || (profissional as any).almoco_fim || '13:00',
+      duracao_atendimento: profissional.duracao_atendimento || (profissional as any).duracao_atendimento || 50,
+      capacidade_atendimento: profissional.capacidade_atendimento || (profissional as any).capacidade_atendimento || 1
+    });
+    setShowModalEditProfissional(true);
+    setOpenDropdown(null);
   };
 
   const clientesFiltrados = clientes.filter(c => 
@@ -331,23 +535,54 @@ const App: React.FC = () => {
                    <th></th>
                  </tr>
                </thead>
-               <tbody>
-                 {clientesFiltrados.map(c => (
-                   <tr key={c.id}>
-                     <td>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                         <div style={{ width:36, height:36, background: 'var(--accent-color)', borderRadius: '10px', display: 'flex', alignItems:'center', justifyContent:'center', fontWeight:'800', color: 'white' }}>{(c.nome || '?')[0]}</div>
-                         <span style={{ fontWeight: 600 }}>{c.nome}</span>
-                       </div>
-                     </td>
-                     <td>{c.telefone}</td>
-                     <td>{c.email || '-'}</td>
-                     <td>
-                       <span className="status-badge status-check">Ativo</span>
-                     </td>
-                     <td><MoreHorizontal size={20} cursor="pointer" color="var(--text-secondary)"/></td>
-                   </tr>
-                 ))}
+                <tbody>
+                  {clientesFiltrados.map(c => (
+                    <tr key={c.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width:36, height:36, background: 'var(--accent-color)', borderRadius: '10px', display: 'flex', alignItems:'center', justifyContent:'center', fontWeight:'800', color: 'white' }}>{(c.nome || '?')[0]}</div>
+                          <span style={{ fontWeight: 600 }}>{c.nome}</span>
+                        </div>
+                      </td>
+                      <td>{c.telefone}</td>
+                      <td>{c.email || '-'}</td>
+                      <td>
+                        <span className="status-badge status-check">Ativo</span>
+                      </td>
+                      <td style={{ position: 'relative' }}>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === c.id ? null : c.id); }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                        >
+                          <MoreHorizontal size={20} color="var(--text-secondary)"/>
+                        </button>
+                        {openDropdown === c.id && (
+                          <div 
+                            ref={(el) => { dropdownRef.current[`cliente-${c.id}`] = el; }}
+                            className="dropdown-menu glass-card animate-fade-in"
+                            style={{ position: 'absolute', right: 0, top: '100%', minWidth: '150px', zIndex: 100, padding: '0.5rem', marginTop: '4px' }}
+                          >
+                            <button 
+                              onClick={() => openEditCliente(c)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '6px', fontSize: '0.9rem' }}
+                              onMouseEnter={(e) => (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.1)'}
+                              onMouseLeave={(e) => (e.target as HTMLElement).style.background = 'none'}
+                            >
+                              <Pencil size={16} /> Editar
+                            </button>
+                            <button 
+                              onClick={() => handleExcluirCliente(c.id)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', borderRadius: '6px', fontSize: '0.9rem' }}
+                              onMouseEnter={(e) => (e.target as HTMLElement).style.background = 'rgba(239,68,68,0.1)'}
+                              onMouseLeave={(e) => (e.target as HTMLElement).style.background = 'none'}
+                            >
+                              <Trash2 size={16} /> Excluir
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                  {clientesFiltrados.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem' }}>Nenhum cliente disponível.</td></tr>}
                </tbody>
              </table>
@@ -362,37 +597,82 @@ const App: React.FC = () => {
                  <UserPlus size={20}/> Novo Profissional
                </button>
              </div>
-             <table>
-               <thead>
-                 <tr>
-                   <th>Nome</th>
-                   <th>Área/Especialidade</th>
-                   <th>Dias de Trabalho</th>
-                   <th>Horário de Trabalho</th>
-                   <th>Capacidade</th>
-                   <th></th>
-                 </tr>
-               </thead>
-               <tbody>
-                 {profissionais.map(p => (
-                   <tr key={p.id}>
-                     <td>{p.nome}</td>
-                     <td>{p.area || '-'}</td>
-                     <td>
-                       {p.diasTrabalho && p.diasTrabalho.length > 0 ? (
-                         <span>{p.diasTrabalho.map(d => d).join(', ')}</span>
-                       ) : (
-                         <span>-</span>
-                       )}
-                     </td>
-                     <td>{p.horariosTrabalho || '-'}</td>
-                     <td>{p.capacidadeAtendimento || 1}</td>
-                     <td><MoreHorizontal size={20} cursor="pointer" color="var(--text-secondary)"/></td>
-                   </tr>
-                 ))}
-                 {profissionais.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '3rem' }}>Nenhum profissional disponível.</td></tr>}
-               </tbody>
-             </table>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Área/Especialidade</th>
+                    <th>Dias de Trabalho</th>
+                    <th>Horário</th>
+                    <th>Almoço</th>
+                    <th>Duração</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profissionais.map(p => {
+                    const diasTrabalho = p.diasTrabalho || (p as any).dias_trabalho?.split(',') || [];
+                    const horarioInicio = p.horario_inicio || (p as any).horario_inicio || '';
+                    const horarioFim = p.horario_fim || (p as any).horario_fim || '';
+                    const almocoInicio = p.almoco_inicio || (p as any).almoco_inicio || '';
+                    const almocoFim = p.almoco_fim || (p as any).almoco_fim || '';
+                    const duracao = p.duracao_atendimento || (p as any).duracao_atendimento || 50;
+                    
+                    return (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 600 }}>{p.nome}</td>
+                      <td>{p.area || (p as any).especialidade || '-'}</td>
+                      <td>
+                        {diasTrabalho.length > 0 ? (
+                          <span style={{ fontSize: '0.85rem' }}>{diasTrabalho.join(', ')}</span>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td>
+                      <td style={{ fontSize: '0.85rem' }}>
+                        {horarioInicio && horarioFim ? `${horarioInicio.substring(0,5)} às ${horarioFim.substring(0,5)}` : '-'}
+                      </td>
+                      <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        {almocoInicio && almocoFim ? `${almocoInicio.substring(0,5)} - ${almocoFim.substring(0,5)}` : '-'}
+                      </td>
+                      <td>{duracao} min</td>
+                      <td style={{ position: 'relative' }}>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === p.id ? null : p.id); }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                        >
+                          <MoreHorizontal size={20} color="var(--text-secondary)"/>
+                        </button>
+                        {openDropdown === p.id && (
+                          <div 
+                            ref={(el) => { dropdownRef.current[`profissional-${p.id}`] = el; }}
+                            className="dropdown-menu glass-card animate-fade-in"
+                            style={{ position: 'absolute', right: 0, top: '100%', minWidth: '150px', zIndex: 100, padding: '0.5rem', marginTop: '4px' }}
+                          >
+                            <button 
+                              onClick={() => openEditProfissional(p)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', background: 'none', border: 'none', color: 'white', cursor: 'pointer', borderRadius: '6px', fontSize: '0.9rem' }}
+                              onMouseEnter={(e) => (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.1)'}
+                              onMouseLeave={(e) => (e.target as HTMLElement).style.background = 'none'}
+                            >
+                              <Pencil size={16} /> Editar
+                            </button>
+                            <button 
+                              onClick={() => handleExcluirProfissional(p.id)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', borderRadius: '6px', fontSize: '0.9rem' }}
+                              onMouseEnter={(e) => (e.target as HTMLElement).style.background = 'rgba(239,68,68,0.1)'}
+                              onMouseLeave={(e) => (e.target as HTMLElement).style.background = 'none'}
+                            >
+                              <Trash2 size={16} /> Excluir
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )})}
+                  {profissionais.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', padding: '3rem' }}>Nenhum profissional disponível.</td></tr>}
+                </tbody>
+              </table>
            </div>
          );
        default:
@@ -489,41 +769,126 @@ const App: React.FC = () => {
               </button>
             </div>
             <form onSubmit={handleCriarHorario}>
-              <div className="form-group">
-                <label>Cliente</label>
-                <select 
-                  value={novoHorario.cliente_id} 
-                  onChange={e => setNovoHorario({ ...novoHorario, cliente_id: e.target.value })}
-                  required
-                >
-                  <option value="">Selecione um cliente</option>
-                  {clientes.map(c => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>Cliente</label>
+                  <select 
+                    value={novoHorario.cliente_id} 
+                    onChange={e => setNovoHorario({ ...novoHorario, cliente_id: e.target.value })}
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    {clientes.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Profissional</label>
+                  <select 
+                    value={novoHorario.profissional_id} 
+                    onChange={e => {
+                      setNovoHorario({ ...novoHorario, profissional_id: e.target.value, data_hora: '' });
+                      setHorariosDisponiveis([]);
+                      setProfissionalInfo(null);
+                      if (e.target.value && novoHorario.data_hora) {
+                        buscarHorariosDisponiveis(e.target.value, novoHorario.data_hora);
+                      }
+                    }}
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    {profissionais.map(p => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              
               <div className="form-group">
-                <label>Profissional</label>
-                <select 
-                  value={novoHorario.profissional_id} 
-                  onChange={e => setNovoHorario({ ...novoHorario, profissional_id: e.target.value })}
-                  required
-                >
-                  <option value="">Selecione um profissional</option>
-                  {profissionais.map(p => (
-                    <option key={p.id} value={p.id}>{p.nome} {p.especialidade ? `(${p.especialidade})` : ''}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Data e Hora</label>
+                <label>Data</label>
                 <input 
-                  type="datetime-local" 
-                  value={novoHorario.data_hora} 
-                  onChange={e => setNovoHorario({ ...novoHorario, data_hora: e.target.value })}
+                  type="date" 
+                  value={novoHorario.data_hora ? novoHorario.data_hora.split('T')[0] : ''} 
+                  onChange={e => {
+                    const data = e.target.value;
+                    setNovoHorario({ ...novoHorario, data_hora: '' });
+                    if (novoHorario.profissional_id && data) {
+                      buscarHorariosDisponiveis(novoHorario.profissional_id, data);
+                    } else {
+                      setHorariosDisponiveis([]);
+                      setProfissionalInfo(null);
+                    }
+                  }}
                   required
                 />
               </div>
+              
+              {profissionalInfo && (
+                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.75rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                  <div style={{ marginBottom: '0.25rem' }}>
+                    <strong>Horário:</strong> {profissionalInfo.horario}
+                  </div>
+                  {profissionalInfo.almoco && (
+                    <div style={{ marginBottom: '0.25rem', color: '#f59e0b' }}>
+                      <strong>Almoço:</strong> {profissionalInfo.almoco}
+                    </div>
+                  )}
+                  <div><strong>Duração:</strong> {profissionalInfo.duracao} minutos</div>
+                </div>
+              )}
+              
+              {profissionalInfo && (
+                <div className="form-group">
+                  <label>Horário Disponíveis</label>
+                  {horariosDisponiveis.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
+                      {horariosDisponiveis.map(hora => (
+                        <button
+                          key={hora}
+                          type="button"
+                          onClick={() => {
+                            const dataFormat = novoHorario.data_hora ? novoHorario.data_hora.split('T')[0] : '';
+                            setNovoHorario({ ...novoHorario, data_hora: `${dataFormat}T${hora}:00` });
+                          }}
+                          style={{
+                            padding: '0.6rem',
+                            borderRadius: '8px',
+                            border: novoHorario.data_hora?.endsWith(hora) ? '2px solid var(--accent-color)' : '1px solid rgba(255,255,255,0.1)',
+                            background: novoHorario.data_hora?.endsWith(hora) ? 'var(--accent-color)' : 'rgba(255,255,255,0.05)',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: novoHorario.data_hora?.endsWith(hora) ? '700' : '400'
+                          }}
+                        >
+                          {hora}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ color: '#ef4444', fontSize: '0.85rem', padding: '0.5rem', background: 'rgba(239,68,68,0.1)', borderRadius: '8px' }}>
+                      Nenhum horário disponível para este dia
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {profissionalInfo && (
+                <div className="form-group">
+                  <label>Horário Selecionado</label>
+                  <input 
+                    type="time" 
+                    value={novoHorario.data_hora ? novoHorario.data_hora.split('T')[1]?.substring(0, 5) || '' : ''} 
+                    onChange={e => {
+                      const dataFormat = novoHorario.data_hora ? novoHorario.data_hora.split('T')[0] : '';
+                      setNovoHorario({ ...novoHorario, data_hora: `${dataFormat}T${e.target.value}:00` });
+                    }}
+                    required
+                  />
+                </div>
+              )}
+              
               <div className="form-group">
                 <label>Status</label>
                 <select 
@@ -540,13 +905,17 @@ const App: React.FC = () => {
                 <textarea 
                   value={novoHorario.observacoes} 
                   onChange={e => setNovoHorario({ ...novoHorario, observacoes: e.target.value })}
-                  rows={3}
-                  placeholder="Observações adicionais..."
+                  rows={2}
+                  placeholder="Observações..."
                 />
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => setShowModalNovoHorario(false)}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                <button type="button" className="btn-cancel" onClick={() => {
+                  setShowModalNovoHorario(false);
+                  setHorariosDisponiveis([]);
+                  setProfissionalInfo(null);
+                }}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting || !novoHorario.data_hora}>
                   {isSubmitting ? 'Criando...' : <><Plus size={18} /> Criar Horário</>}
                 </button>
               </div>
@@ -765,29 +1134,247 @@ const App: React.FC = () => {
                   </label>
                 </div>
               </div>
-              <div className="form-group">
-                <label>Horário de Trabalho</label>
-                <input 
-                  type="text" 
-                  value={novoProfissional.horariosTrabalho} 
-                  onChange={e => setNovoProfissional({ ...novoProfissional, horariosTrabalho: e.target.value })}
-                  placeholder="Ex: 08:00 às 18:00"
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>Hora de Início do Expediente</label>
+                  <input 
+                    type="time" 
+                    value={novoProfissional.horario_inicio} 
+                    onChange={e => setNovoProfissional({ ...novoProfissional, horario_inicio: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Hora de Fim do Expediente</label>
+                  <input 
+                    type="time" 
+                    value={novoProfissional.horario_fim} 
+                    onChange={e => setNovoProfissional({ ...novoProfissional, horario_fim: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="form-group">
-                <label>Quantidade de Pessoas de Uma Vez</label>
-                <input 
-                  type="number" 
-                  min="1"
-                  value={novoProfissional.capacidadeAtendimento} 
-                  onChange={e => setNovoProfissional({ ...novoProfissional, capacidadeAtendimento: parseInt(e.target.value) || 1 })}
-                  placeholder="1"
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>Início do Almoço</label>
+                  <input 
+                    type="time" 
+                    value={novoProfissional.almoco_inicio} 
+                    onChange={e => setNovoProfissional({ ...novoProfissional, almoco_inicio: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Fim do Almoço</label>
+                  <input 
+                    type="time" 
+                    value={novoProfissional.almoco_fim} 
+                    onChange={e => setNovoProfissional({ ...novoProfissional, almoco_fim: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>Duração do Atendimento (minutos)</label>
+                  <select 
+                    value={novoProfissional.duracao_atendimento} 
+                    onChange={e => setNovoProfissional({ ...novoProfissional, duracao_atendimento: parseInt(e.target.value) })}
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'white' }}
+                  >
+                    <option value={30}>30 minutos</option>
+                    <option value={40}>40 minutos</option>
+                    <option value={50}>50 minutos</option>
+                    <option value={60}>60 minutos</option>
+                    <option value={90}>90 minutos</option>
+                    <option value={120}>120 minutos</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Atendimentos Simultâneos</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    value={novoProfissional.capacidade_atendimento} 
+                    onChange={e => setNovoProfissional({ ...novoProfissional, capacidade_atendimento: parseInt(e.target.value) || 1 })}
+                    placeholder="1"
+                  />
+                </div>
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={() => setShowModalNovoProfissional(false)}>Cancelar</button>
                 <button type="submit" className="btn-primary" disabled={isSubmitting}>
                   {isSubmitting ? 'Criando...' : <><UserPlus size={18} /> Criar Profissional</>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showModalEditCliente && editingCliente && (
+        <div className="modal-overlay" onClick={() => setShowModalEditCliente(false)}>
+          <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2>Editar Cliente</h2>
+              <button className="modal-close" onClick={() => setShowModalEditCliente(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEditarCliente}>
+              <div className="form-group">
+                <label>Nome</label>
+                <input 
+                  type="text" 
+                  value={editingCliente.nome} 
+                  onChange={e => setEditingCliente({ ...editingCliente, nome: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Telefone / WhatsApp</label>
+                <input 
+                  type="tel" 
+                  value={editingCliente.telefone} 
+                  onChange={e => setEditingCliente({ ...editingCliente, telefone: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>E-mail</label>
+                <input 
+                  type="email" 
+                  value={editingCliente.email || ''} 
+                  onChange={e => setEditingCliente({ ...editingCliente, email: e.target.value })}
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowModalEditCliente(false)}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Salvando...' : <><Pencil size={18} /> Salvar Alterações</>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showModalEditProfissional && editingProfissional && (
+        <div className="modal-overlay" onClick={() => setShowModalEditProfissional(false)}>
+          <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2>Editar Profissional</h2>
+              <button className="modal-close" onClick={() => setShowModalEditProfissional(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEditarProfissional}>
+              <div className="form-group">
+                <label>Nome</label>
+                <input 
+                  type="text" 
+                  value={editingProfissional.nome} 
+                  onChange={e => setEditingProfissional({ ...editingProfissional, nome: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Área/Especialidade</label>
+                <input 
+                  type="text" 
+                  value={editingProfissional.area || ''} 
+                  onChange={e => setEditingProfissional({ ...editingProfissional, area: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Dias da Semana que Trabalha</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'].map(dia => {
+                    const labels: { [key: string]: string } = { segunda: 'Segunda', terca: 'Terça', quarta: 'Quarta', quinta: 'Quinta', sexta: 'Sexta', sabado: 'Sábado', domingo: 'Domingo' };
+                    return (
+                      <label key={dia} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={editingProfissional.diasTrabalho?.includes(dia) || false}
+                          onChange={e => {
+                            const dias = [...(editingProfissional.diasTrabalho || [])];
+                            if (e.target.checked) {
+                              if (!dias.includes(dia)) dias.push(dia);
+                            } else {
+                              const index = dias.indexOf(dia);
+                              if (index > -1) dias.splice(index, 1);
+                            }
+                            setEditingProfissional({ ...editingProfissional, diasTrabalho: dias });
+                          }}
+                        />
+                        {labels[dia]}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>Hora de Início</label>
+                  <input 
+                    type="time" 
+                    value={editingProfissional.horario_inicio || ''} 
+                    onChange={e => setEditingProfissional({ ...editingProfissional, horario_inicio: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Hora de Fim</label>
+                  <input 
+                    type="time" 
+                    value={editingProfissional.horario_fim || ''} 
+                    onChange={e => setEditingProfissional({ ...editingProfissional, horario_fim: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>Início do Almoço</label>
+                  <input 
+                    type="time" 
+                    value={editingProfissional.almoco_inicio || ''} 
+                    onChange={e => setEditingProfissional({ ...editingProfissional, almoco_inicio: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Fim do Almoço</label>
+                  <input 
+                    type="time" 
+                    value={editingProfissional.almoco_fim || ''} 
+                    onChange={e => setEditingProfissional({ ...editingProfissional, almoco_fim: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label>Duração do Atendimento (minutos)</label>
+                  <select 
+                    value={editingProfissional.duracao_atendimento || 50} 
+                    onChange={e => setEditingProfissional({ ...editingProfissional, duracao_atendimento: parseInt(e.target.value) })}
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'white' }}
+                  >
+                    <option value={30}>30 minutos</option>
+                    <option value={40}>40 minutos</option>
+                    <option value={50}>50 minutos</option>
+                    <option value={60}>60 minutos</option>
+                    <option value={90}>90 minutos</option>
+                    <option value={120}>120 minutos</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Atendimentos Simultâneos</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    value={editingProfissional.capacidade_atendimento || 1} 
+                    onChange={e => setEditingProfissional({ ...editingProfissional, capacidade_atendimento: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowModalEditProfissional(false)}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Salvando...' : <><Pencil size={18} /> Salvar Alterações</>}
                 </button>
               </div>
             </form>
